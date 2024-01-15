@@ -152,14 +152,14 @@ int copy_folder_recursive(const char * source, const char * destination)
     int src_len = strlen(source);
     int dst_len = strlen(destination);
 
-    char new_destination[255];
+    char new_destination[256];
     strcpy(new_destination, destination);
     if (new_destination[dst_len-1] != '/'){
         new_destination[dst_len] = '/';
         new_destination[dst_len+1] = 0;
     }
     
-    char new_source[255];
+    char new_source[256];
     strcpy(new_source, source);
     if (new_source[src_len-1] != '/'){
         new_source[src_len] = '/';

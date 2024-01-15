@@ -37,9 +37,12 @@ int stubScanner(u32 patch_addr, u32 orig_inst){
     _sceSdGetLastIndex = (void*)FindImportUserRam("sceChnnlsv", 0xC4C494F8);
     if (_sceSdGetLastIndex == NULL){
         pspDebugScreenPrintf("Opening savedata utility\n");
-        p5_open_savedata(PSP_UTILITY_SAVEDATA_AUTOLOAD);
+        if (!savedata_open){
+            p5_open_savedata(PSP_UTILITY_SAVEDATA_AUTOLOAD);
+            savedata_open = 1;
+        }
         _sceSdGetLastIndex = (void*)FindImportVolatileRam("sceChnnlsv", 0xC4C494F8);
-        savedata_open = 1;
+        if (_sceSdGetLastIndex == NULL) _sceSdGetLastIndex = (void*)FindImportUserRam("sceChnnlsv", 0xC4C494F8);
     }
     // the function we need to patch
     libctime_addr = patch_addr;
@@ -47,6 +50,8 @@ int stubScanner(u32 patch_addr, u32 orig_inst){
     _sceKernelLibcTime = (void*)(&sceKernelLibcTime);
 
     sceKernelDcacheWritebackAll();
+
+    pspDebugScreenPrintf("_sceSdGetLastIndex: %p\n", _sceSdGetLastIndex);
 
     return (_sceSdGetLastIndex == NULL);
 }
@@ -80,9 +85,7 @@ int doExploit()
         _sceKernelLibcTime(0x08800000, (u32)&KernelFunction | (u32)0x80000000);
         sceKernelDcacheWritebackAll();
     }
-
-    if (savedata_open)
-        p5_close_savedata();
+    sceKernelTerminateDeleteThread(qwikthread);
 
     pspDebugScreenPrintf("Kernel exploit done\n");
 
