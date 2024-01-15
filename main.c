@@ -10,10 +10,12 @@ static KernelFunctions _ktbl;
 KernelFunctions* k_tbl = &_ktbl;
 
 void ktest(){
+    int k1 = pspSdkSetK1(0);
     pspDebugScreenPrintf("Got Kernel Access!\n");
     scanKernelFunctions(k_tbl);
     repairInstruction();
     initDumperKernelThread();
+    pspSdkSetK1(k1);
 }
 
 int main(){ 
