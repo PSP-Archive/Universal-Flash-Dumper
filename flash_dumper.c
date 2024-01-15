@@ -19,6 +19,9 @@ int (*NandUnlock)() = NULL;
 int (*NandReadPagesRawAll)(u32, u8*, u8*, int) = NULL;
 int (*NandReadBlockWithRetry)(u32, u8*, void*) = NULL;
 
+int (*IdStorageReadLeaf)(u16, u8*);
+int (*KernelGetUserLevel)();
+
 u8 seed[0x100];
 // sigcheck keys
 u8 check_keys0[0x10] = {
@@ -266,6 +269,53 @@ int pspIplGetIpl(u8 *buf)
 	return size;
 }
 
+
+// Set User Level
+int sctrlKernelSetUserLevel(int level)
+{
+    
+    // Backup User Level
+    int previouslevel = KernelGetUserLevel();
+    
+    
+    u32 _sceKernelReleaseThreadEventHandler = FindFunction("sceThreadManager", "ThreadManForKernel", 0x72F3C145);
+    
+    u32 threadman_userlevel_struct = _lh(_sceKernelReleaseThreadEventHandler + 0x4)<<16;
+    threadman_userlevel_struct += (short)_lh(_sceKernelReleaseThreadEventHandler + 0x18);
+    
+    
+    // Set User Level
+    _sw((level ^ 8) << 28, *(unsigned int *)(threadman_userlevel_struct) + 0x14);
+    
+    // Flush Cache
+    k_tbl->KernelDcacheWritebackInvalidateAll();
+    
+    // Return previous User Level
+    return previouslevel;
+}
+
+int dcIdStorageReadLeaf(u16 leafid, u8 *buf)
+{
+    int level = sctrlKernelSetUserLevel(8);
+
+    int res = IdStorageReadLeaf(leafid, buf);
+
+    sctrlKernelSetUserLevel(level);
+
+    return res;
+}
+
+void dump_idStorage(){
+    static u8 buf[512];
+    int fd = k_tbl->KernelIOOpen("ms0:/idStorage.bin", PSP_O_WRONLY | PSP_O_CREAT | PSP_O_TRUNC, 0777);
+    
+    for (int i=0; i<0x140; i++){
+        dcIdStorageReadLeaf(i, buf);
+        k_tbl->KernelIOWrite(fd, buf, 512);
+    }
+    k_tbl->KernelIOClose(fd);
+}
+
 int kthread(SceSize args, void *argp){
 
     pspDebugScreenPrintf("Dumping ipl.bin\n");
@@ -276,6 +326,9 @@ int kthread(SceSize args, void *argp){
     int fd = k_tbl->KernelIOOpen("ms0:/ipl.bin", PSP_O_WRONLY|PSP_O_CREAT|PSP_O_TRUNC, 0777);
     k_tbl->KernelIOWrite(fd, orig_ipl, sizeof(orig_ipl));
     k_tbl->KernelIOClose(fd);
+
+    pspDebugScreenPrintf("Dumping idStorage\n");
+    dump_idStorage();
 
     open_flash();
 
@@ -308,7 +361,20 @@ void initDumperKernelThread(){
 
     if (!NandLock || !NandUnlock || !NandReadPagesRawAll || !NandReadBlockWithRetry){
         pspDebugScreenPrintf("ERROR: cannot find sceNand imports\n");
-        pspDebugScreenPrintf("%p, %p, %p, %p", NandLock, NandUnlock, NandReadPagesRawAll, NandReadBlockWithRetry);
+        pspDebugScreenPrintf("%p, %p, %p, %p\n", NandLock, NandUnlock, NandReadPagesRawAll, NandReadBlockWithRetry);
+        return;
+    }
+
+    KernelGetUserLevel = FindFunction("sceThreadManager", "ThreadManForKernel", 0xF6427665);
+    IdStorageReadLeaf = FindFunction("sceIdStorage_Service", "sceIdStorage_driver", 0xEB00C509);
+    
+    if (IdStorageReadLeaf == NULL){
+        pspDebugScreenPrintf("ERROR: cannot find import IdStorageReadLeaf\n");
+        return;
+    }
+
+    if (KernelGetUserLevel == NULL){
+        pspDebugScreenPrintf("ERROR: cannot find import KernelGetUserLevel\n");
         return;
     }
 
