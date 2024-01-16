@@ -368,10 +368,11 @@ void initDumperKernelThread(){
 
     BufferCopyWithRange = FindFunction("sceMemlmd", "semaphore", 0x4C537C72);
 
-    NandLock = FindFunction("sceLowIO_Driver", "sceNand_driver", 0xAE4438C7);
-    NandUnlock = FindFunction("sceLowIO_Driver", "sceNand_driver", 0x41FFA822);
-    NandReadPagesRawAll = FindFunction("sceLowIO_Driver", "sceNand_driver", 0xC478C1DE);
-    NandReadBlockWithRetry = FindFunction("sceLowIO_Driver", "sceNand_driver", 0xC32EA051);
+    char* nand_driver_mod = (FindTextAddrByName("sceLowIO_Driver")? "sceLowIO_Driver" : "sceNAND_Driver");
+    NandLock = FindFunction(nand_driver_mod, "sceNand_driver", 0xAE4438C7);
+    NandUnlock = FindFunction(nand_driver_mod, "sceNand_driver", 0x41FFA822);
+    NandReadPagesRawAll = FindFunction(nand_driver_mod, "sceNand_driver", 0xC478C1DE);
+    NandReadBlockWithRetry = FindFunction(nand_driver_mod, "sceNand_driver", 0xC32EA051);
 
     KernelGetUserLevel = FindFunction("sceThreadManager", "ThreadManForKernel", 0xF6427665);
     IdStorageReadLeaf = FindFunction("sceIdStorage_Service", "sceIdStorage_driver", 0xEB00C509);
