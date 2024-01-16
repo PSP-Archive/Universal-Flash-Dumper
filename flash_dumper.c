@@ -81,7 +81,7 @@ static int Decrypt(u32 *buf, int size)
     buf[3] = 0x100;
     buf[4] = size;
 
-    if (BufferCopyWithRange((u8*)buf, size+0x14, (u8*)buf, size+0x14, 8) != 0)
+    if (BufferCopyWithRange == NULL || BufferCopyWithRange((u8*)buf, size+0x14, (u8*)buf, size+0x14, 8) != 0)
         return -1;
 
     return 0;
@@ -321,17 +321,33 @@ void dump_idStorage(){
 
 int kthread(SceSize args, void *argp){
 
-    pspDebugScreenPrintf("Dumping ipl.bin\n");
-    NandLock(0);
-	int res = pspIplGetIpl(orig_ipl);
-	NandUnlock();
+    if (!NandLock || !NandUnlock || !NandReadPagesRawAll || !NandReadBlockWithRetry){
+        pspDebugScreenPrintf("WARNING: cannot find sceNand imports, can't dump IPL\n");
+        pspDebugScreenPrintf("%p, %p, %p, %p\n", NandLock, NandUnlock, NandReadPagesRawAll, NandReadBlockWithRetry);
+    }
+    else {
+        pspDebugScreenPrintf("Dumping ipl.bin\n");
+        NandLock(0);
+        int res = pspIplGetIpl(orig_ipl);
+        NandUnlock();
 
-    int fd = k_tbl->KernelIOOpen("ms0:/ipl.bin", PSP_O_WRONLY|PSP_O_CREAT|PSP_O_TRUNC, 0777);
-    k_tbl->KernelIOWrite(fd, orig_ipl, sizeof(orig_ipl));
-    k_tbl->KernelIOClose(fd);
+        int fd = k_tbl->KernelIOOpen("ms0:/ipl.bin", PSP_O_WRONLY|PSP_O_CREAT|PSP_O_TRUNC, 0777);
+        k_tbl->KernelIOWrite(fd, orig_ipl, sizeof(orig_ipl));
+        k_tbl->KernelIOClose(fd);
+    }
 
-    pspDebugScreenPrintf("Dumping idStorage\n");
-    dump_idStorage();
+    if (IdStorageReadLeaf == NULL || KernelGetUserLevel == NULL){
+        pspDebugScreenPrintf("WARNING: cannot find idStorage imports, can't dump idStorage\n");
+        pspDebugScreenPrintf("%p, %p\n", IdStorageReadLeaf, KernelGetUserLevel);
+    }
+    else {
+        pspDebugScreenPrintf("Dumping idStorage\n");
+        dump_idStorage();
+    }
+
+    if (BufferCopyWithRange == NULL){
+        pspDebugScreenPrintf("WARNING: cannot find import BufferCopyWithRange, can't decrypt PRX\n");
+    }
 
     open_flash();
 
@@ -352,34 +368,13 @@ void initDumperKernelThread(){
 
     BufferCopyWithRange = FindFunction("sceMemlmd", "semaphore", 0x4C537C72);
 
-    if (BufferCopyWithRange == NULL){
-        pspDebugScreenPrintf("ERROR: cannot find import BufferCopyWithRange\n");
-        return;
-    }
-
     NandLock = FindFunction("sceLowIO_Driver", "sceNand_driver", 0xAE4438C7);
     NandUnlock = FindFunction("sceLowIO_Driver", "sceNand_driver", 0x41FFA822);
     NandReadPagesRawAll = FindFunction("sceLowIO_Driver", "sceNand_driver", 0xC478C1DE);
     NandReadBlockWithRetry = FindFunction("sceLowIO_Driver", "sceNand_driver", 0xC32EA051);
 
-    if (!NandLock || !NandUnlock || !NandReadPagesRawAll || !NandReadBlockWithRetry){
-        pspDebugScreenPrintf("ERROR: cannot find sceNand imports\n");
-        pspDebugScreenPrintf("%p, %p, %p, %p\n", NandLock, NandUnlock, NandReadPagesRawAll, NandReadBlockWithRetry);
-        return;
-    }
-
     KernelGetUserLevel = FindFunction("sceThreadManager", "ThreadManForKernel", 0xF6427665);
     IdStorageReadLeaf = FindFunction("sceIdStorage_Service", "sceIdStorage_driver", 0xEB00C509);
-    
-    if (IdStorageReadLeaf == NULL){
-        pspDebugScreenPrintf("ERROR: cannot find import IdStorageReadLeaf\n");
-        return;
-    }
-
-    if (KernelGetUserLevel == NULL){
-        pspDebugScreenPrintf("ERROR: cannot find import KernelGetUserLevel\n");
-        return;
-    }
 
     SceUID kthreadID = k_tbl->KernelCreateThread( "arkflasher", (void*)KERNELIFY(&kthread), 1, 0x20000, PSP_THREAD_ATTR_VFPU, NULL);
     if (kthreadID >= 0){

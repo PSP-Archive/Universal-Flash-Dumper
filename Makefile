@@ -1,5 +1,5 @@
 TARGET = flash_dumper
-OBJS = main.o utils.o kernel_read.o kernel_write.o flash_dumper.o
+OBJS = main.o utils.o kernel_read.o kernel_write.o flash_dumper.o imports.o
 
 CFLAGS = -O2 -Os -G0 -Wall -std=c99
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti

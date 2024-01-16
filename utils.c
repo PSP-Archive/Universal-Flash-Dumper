@@ -43,6 +43,11 @@ void scanKernelFunctions(KernelFunctions* kfuncs){
     // ARK kernel functions
     kfuncs->FindTextAddrByName = &FindTextAddrByName;
     kfuncs->FindFunction = &FindFunction;
+
+    for (int i=0; i<sizeof(KernelFunctions); i+=4){
+        u32 ptr = *(u32*)((u32)kfuncs + i);
+        if (ptr == NULL) pspDebugScreenPrintf("WARNING: could not find function %d\n", i);
+    }
 }
 
 
@@ -83,7 +88,7 @@ u32 FindImportUserRam(char *libname, u32 nid){
 
 int p5_open_savedata(int mode)
 {
-    p5_close_savedata();
+    //p5_close_savedata();
 
     SceUtilitySavedataParam dialog;
 
@@ -106,7 +111,7 @@ int p5_open_savedata(int mode)
     while ((status = sceUtilitySavedataGetStatus()) < 2)
     {
         sceKernelDelayThread(100);
-        if (status < 0) return 0; // error
+        //if (status < 0) return 0; // error
     }
     return 1;
 }
@@ -235,4 +240,66 @@ u32 FindFunction(const char *module, const char *library, u32 nid)
         }
     }
     return 0;
+}
+
+// qwikrazor87's trick to get any usermode import from kernel
+u32 qwikTrick(char* lib, u32 nid, u32 version){
+
+    u32 ret = 0x08800E00;
+
+    while (*(u32*)ret)
+        ret += 8;
+
+    memset((void *)0x08800D00, 0, 8);
+
+    p5_open_savedata(PSP_UTILITY_SAVEDATA_AUTOLOAD);
+
+    u32 addr;
+    for (addr = 0x08400000; addr < 0x08800000; addr += 4) {
+        if (strcmp("sceVshSDAuto_Module", (char *)addr) == 0)
+            break;
+    }
+
+    p5_close_savedata();
+
+    addr -= 0xBC;
+    *(u32*)0x08800C00 = nid;
+
+    int qwik_trick()
+    {
+        sceKernelDelayThread(350);
+        u32 timer = 0;
+
+        while (!*(u32*)0x08800D00 && (timer++ < 600)) {
+            _sw((u32)lib, addr);
+            _sw(version, addr + 4);
+            _sw(0x00010005, addr + 8);
+            _sw(0x08800C00, addr + 12);
+            _sw(0x08800D00, addr + 16);
+
+            sceKernelDelayThread(0);
+        }
+
+        sceKernelExitThread(0);
+        return 0;
+    }
+
+    SceUID qwiktrick = sceKernelCreateThread("qwiktrick", qwik_trick, 8, 512, THREAD_ATTR_USER, NULL);
+    sceKernelStartThread(qwiktrick, 0, NULL);
+
+    p5_open_savedata(PSP_UTILITY_SAVEDATA_AUTOLOAD);
+
+    memcpy((void *)ret, (const void *)0x08800D00, 8);
+
+    _flush_cache();
+
+    //p5_close_savedata();
+
+    sceKernelDeleteThread(qwiktrick);
+    
+    return ret;
+}
+
+void _flush_cache(){
+    sceKernelDcacheWritebackAll();
 }
