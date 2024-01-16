@@ -8,24 +8,25 @@ void scanKernelFunctions(KernelFunctions* kfuncs){
 
     memset(kfuncs, 0, sizeof(KernelFunctions));
 
-    kfuncs->KernelIOOpen = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0x109F50BC);
-    kfuncs->KernelIORead = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0x6A638D83);
-    kfuncs->KernelIOLSeek = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0x27EB27B8);
-    kfuncs->KernelIOClose = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0x810C4BC3);
-    kfuncs->KernelIOWrite = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0x42EC03AC);
-    kfuncs->KernelIOMkdir = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0x06A70004);
-    kfuncs->KernelIORmdir = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0x1117C65F);
-    kfuncs->KernelIODopen = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0xB29DDF9C);
-    kfuncs->KernelIODread = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0xE3EB004C);
-    kfuncs->KernelIODclose = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0xEB092469);
-    kfuncs->KernelIOGetStat = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0xACE946E8);
-    kfuncs->KernelIORemove = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0xF27A9C51);
-    kfuncs->IoAssign = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0xB2A628C1);
-    kfuncs->IoUnassign = (void*)FindFunction("sceIOFileManager", "IoFileMgrForKernel", 0x6D08A871);
+    kfuncs->KernelIOOpen = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0x109F50BC);
+    kfuncs->KernelIORead = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0x6A638D83);
+    kfuncs->KernelIOLSeek = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0x27EB27B8);
+    kfuncs->KernelIOClose = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0x810C4BC3);
+    kfuncs->KernelIOWrite = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0x42EC03AC);
+    kfuncs->KernelIOMkdir = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0x06A70004);
+    kfuncs->KernelIORmdir = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0x1117C65F);
+    kfuncs->KernelIODopen = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0xB29DDF9C);
+    kfuncs->KernelIODread = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0xE3EB004C);
+    kfuncs->KernelIODclose = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0xEB092469);
+    kfuncs->KernelIOGetStat = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0xACE946E8);
+    kfuncs->KernelIORemove = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0xF27A9C51);
+    kfuncs->IoAssign = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0xB2A628C1);
+    kfuncs->IoUnassign = (void*)FindFunction("sceIOFileManager", "IoFileMgrForUser", 0x6D08A871);
     
-    kfuncs->KernelAllocPartitionMemory = (void*)FindFunction("sceSystemMemoryManager", "SysMemForKernel", 0x237DBD4F);
-    kfuncs->KernelGetBlockHeadAddr = (void*)FindFunction("sceSystemMemoryManager", "SysMemForKernel", 0x9D9A5BA1);
-    kfuncs->KernelFreePartitionMemory = (void*)FindFunction("sceSystemMemoryManager", "SysMemForKernel", 0xB6D61D02);
+    kfuncs->KernelAllocPartitionMemory = (void*)FindFunction("sceSystemMemoryManager", "SysMemUserForUser", 0x237DBD4F);
+    kfuncs->KernelGetBlockHeadAddr = (void*)FindFunction("sceSystemMemoryManager", "SysMemUserForUser", 0x9D9A5BA1);
+    kfuncs->KernelFreePartitionMemory = (void*)FindFunction("sceSystemMemoryManager", "SysMemUserForUser", 0xB6D61D02);
+
     kfuncs->KernelIcacheInvalidateAll = (void*)FindFunction("sceSystemMemoryManager", "UtilsForKernel", 0x920F104A);
     kfuncs->KernelDcacheWritebackInvalidateAll = (void*)FindFunction("sceSystemMemoryManager", "UtilsForKernel", 0xB435DEC5);
     kfuncs->KernelDcacheInvalidateRange = (void*)FindFunction("sceSystemMemoryManager", "UtilsForKernel", 0xBFA98062);
@@ -33,12 +34,12 @@ void scanKernelFunctions(KernelFunctions* kfuncs){
     
     kfuncs->KernelFindModuleByName = (void*)FindFunction("sceLoaderCore", "LoadCoreForKernel", 0xF6B1BF0F);
     
-    kfuncs->KernelCreateThread = (void*)FindFunction("sceThreadManager", "ThreadManForKernel", 0x446D8DE6);
-    kfuncs->KernelStartThread = (void*)FindFunction("sceThreadManager", "ThreadManForKernel", 0xF475845D);
-    kfuncs->KernelDelayThread = (void*)FindFunction("sceThreadManager", "ThreadManForKernel", 0xCEADEB47);
-    kfuncs->KernelExitThread = (void*)FindFunction("sceThreadManager", "ThreadManForKernel", 0xAA73C935);
-    kfuncs->KernelDeleteThread = (void*)FindFunction("sceThreadManager", "ThreadManForKernel", 0x9FA03CD3);
-    kfuncs->waitThreadEnd = (void*)FindFunction("sceThreadManager", "ThreadManForKernel", 0x278C0DF5);
+    kfuncs->KernelCreateThread = (void*)FindFunction("sceThreadManager", "ThreadManForUser", 0x446D8DE6);
+    kfuncs->KernelStartThread = (void*)FindFunction("sceThreadManager", "ThreadManForUser", 0xF475845D);
+    kfuncs->KernelDelayThread = (void*)FindFunction("sceThreadManager", "ThreadManForUser", 0xCEADEB47);
+    kfuncs->KernelExitThread = (void*)FindFunction("sceThreadManager", "ThreadManForUser", 0xAA73C935);
+    kfuncs->KernelDeleteThread = (void*)FindFunction("sceThreadManager", "ThreadManForUser", 0x9FA03CD3);
+    kfuncs->waitThreadEnd = (void*)FindFunction("sceThreadManager", "ThreadManForUser", 0x278C0DF5);
     
     // ARK kernel functions
     kfuncs->FindTextAddrByName = &FindTextAddrByName;
@@ -195,18 +196,38 @@ u32 FindFunctionFromUsermode(const char *library, u32 nid, u32 start_addr, u32 e
     return 0;
 }
 
-u32 FindTextAddrByName(const char *modulename)
-{
+u32 FindSysMemStruct(){
     u32 kaddr;
     for (kaddr = 0x88000000; kaddr < 0x88400000; kaddr += 4) {
-        if (strcmp((const char *)kaddr, modulename) == 0) {
-            if ((*(u32*)(kaddr + 0x64) == *(u32*)(kaddr + 0x78)) && \
-                (*(u32*)(kaddr + 0x68) == *(u32*)(kaddr + 0x88))) {
-                if (*(u32*)(kaddr + 0x64) && *(u32*)(kaddr + 0x68))
-                    return *(u32*)(kaddr + 0x64);
+        if (strcmp((const char *)kaddr, "sceSystemMemoryManager") == 0) {
+            if (AddressInRange(_lw(kaddr-8), 0x88000000, 0x88400000)
+                && _lw(kaddr+0x64) == 0x88000000
+                && _lw(kaddr+0x68) ){
+                    return kaddr-8;
             }
         }
     }
+    return 0;
+}
+
+u32 FindModuleByName(const char *modulename){
+    u32 mod = FindSysMemStruct();
+    while (mod){
+        if (strcmp(mod+8, modulename) == 0){
+            return mod;
+        }
+        mod = _lw(mod);
+    }
+    return 0;
+}
+
+u32 FindTextAddrByName(const char *modulename)
+{
+    u32 mod = FindModuleByName(modulename);
+
+    if (mod)
+        return *(u32*)(mod + 0x6C);
+
     return 0;
 }
 
@@ -293,7 +314,7 @@ u32 qwikTrick(char* lib, u32 nid, u32 version){
 
     _flush_cache();
 
-    //p5_close_savedata();
+    p5_close_savedata();
 
     sceKernelDeleteThread(qwiktrick);
     
