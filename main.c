@@ -1,10 +1,10 @@
-#include "main.h"
+#include "libpspexploit.h"
+
+// flash_dumper.c
+void initDumperKernelThread();
 
 PSP_MODULE_INFO("Flash Dumper", PSP_MODULE_USER, 1, 0);
 PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER | PSP_THREAD_ATTR_VFPU);
-
-u32* kram_copy = NULL;
-SceUID memid = -1;
 
 static KernelFunctions _ktbl;
 KernelFunctions* k_tbl = &_ktbl;
@@ -13,53 +13,47 @@ void kmain(){
     int k1 = pspSdkSetK1(0);
     pspDebugScreenPrintf("Got Kernel Access!\n");
     scanKernelFunctions(k_tbl);
-    repairInstruction();
+    repairKernel();
     initDumperKernelThread();
     pspDebugScreenPrintf("All Done!\n");
     pspSdkSetK1(k1);
 }
 
-int main(){ 
+int main(){
+
+    int res = 0;
 
     pspDebugScreenInit();
 
     pspDebugScreenPrintf("Universal Flash Dumper Started.\n");
+    
+    pspDebugScreenPrintf("Initializing kernel exploit...\n");
+    res = initExploit();
 
-    memid = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "", PSP_SMEM_High, KRAM_BACKUP_SIZE, NULL);
-    kram_copy = sceKernelGetBlockHeadAddr(memid);
+    if (res == 0){
 
-    pspDebugScreenPrintf("Dumping kernel RAM for analysis.\n");
-    dump_kram(kram_copy, 0x88000000, KRAM_BACKUP_SIZE);
-
-    pspDebugScreenPrintf("Analyzing kernel RAM to obtain offset of sceKernelLibcTime\n");
-    u32 libctime_addr = FindFunctionFromUsermode("UtilsForUser", 0x27CC57F0, (u32)kram_copy, (u32)kram_copy + KRAM_BACKUP_SIZE);
-
-    pspDebugScreenPrintf("Found address of sceKernelLibcTime at: %p\n", libctime_addr);
-
-    u32 libctime_offset = libctime_addr - 0x88000000;
-    u32 orig_inst = *(u32*)( (u32)kram_copy + libctime_offset + 4 );
-
-    if (stubScanner(libctime_addr+4, orig_inst) == 0){
-        if (doExploit() == 0){
-            executeKernel(&kmain);
+        pspDebugScreenPrintf("Corrupting kernel...\n");
+        res = doExploit();
+        
+        if (res == 0){
+            executeKernel(kmain);
         }
-        else{
-            pspDebugScreenPrintf("ERROR: Could not execute kernel exploit\n");
+        else {
+            pspDebugScreenPrintf("ERROR: %p", res);
         }
+    
     }
     else{
-        pspDebugScreenPrintf("ERROR: Could not find vulnerable function\n");
+        pspDebugScreenPrintf("ERROR: %p\n", res);
     }
 
     pspDebugScreenPrintf("Press any button to exit\n");
-
+    SceCtrlData pad;
     while (1){
-        SceCtrlData pad;
         sceCtrlReadBufferPositive(&pad, 1);
         if (pad.Buttons) break;
     }
 
     sceKernelExitGame();
-
     return 0;
 }

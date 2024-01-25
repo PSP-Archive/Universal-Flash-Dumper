@@ -1,4 +1,4 @@
-#include "main.h"
+#include "libpspexploit.h"
 
 #define BUF_SIZE 1024*32
 
