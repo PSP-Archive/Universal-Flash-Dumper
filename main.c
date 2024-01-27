@@ -12,8 +12,8 @@ KernelFunctions* k_tbl = &_ktbl;
 void kmain(){
     int k1 = pspSdkSetK1(0);
     pspDebugScreenPrintf("Got Kernel Access!\n");
-    scanKernelFunctions(k_tbl);
-    repairKernel();
+    pspXploitScanKernelFunctions(k_tbl);
+    pspXploitRepairKernel();
     initDumperKernelThread();
     pspDebugScreenPrintf("All Done!\n");
     pspSdkSetK1(k1);
@@ -28,15 +28,15 @@ int main(){
     pspDebugScreenPrintf("Universal Flash Dumper Started.\n");
     
     pspDebugScreenPrintf("Initializing kernel exploit...\n");
-    res = initExploit();
+    res = pspXploitInitKernelExploit();
 
     if (res == 0){
 
         pspDebugScreenPrintf("Corrupting kernel...\n");
-        res = doExploit();
+        res = pspXploitDoKernelExploit();
         
         if (res == 0){
-            executeKernel(kmain);
+            pspXploitExecuteKernel(kmain);
         }
         else {
             pspDebugScreenPrintf("ERROR: %p", res);

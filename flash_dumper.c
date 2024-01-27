@@ -14,13 +14,14 @@
 u8  user[PSP_NAND_BLOCK_USER_SIZE], spare[PSP_NAND_BLOCK_SPARE_SMALL_SIZE];
 u8 orig_ipl[0x24000] __attribute__((aligned(64)));
 
+extern KernelFunctions* k_tbl;
+
 int (*NandLock)(int) = NULL;
 int (*NandUnlock)() = NULL;
 int (*NandReadPagesRawAll)(u32, u8*, u8*, int) = NULL;
 int (*NandReadBlockWithRetry)(u32, u8*, void*) = NULL;
 
 int (*IdStorageReadLeaf)(u16, u8*);
-int (*KernelGetUserLevel)();
 
 u8 seed[0x100];
 // sigcheck keys
@@ -269,41 +270,13 @@ int pspIplGetIpl(u8 *buf)
 	return size;
 }
 
-
-// Set User Level
-int sctrlKernelSetUserLevel(int level)
-{
-    
-    // Backup User Level
-    int previouslevel = KernelGetUserLevel();
-    
-    u32 _sceKernelReleaseThreadEventHandler = FindFunction("sceThreadManager", "ThreadManForUser", 0x72F3C145);
-
-    u32 addr = _sceKernelReleaseThreadEventHandler + 0x4;
-    do {
-        addr += 4;
-    } while ((_lw(addr)&0xFFF00000) != 0x24B00000);
-    
-    u32 threadman_userlevel_struct = _lh(_sceKernelReleaseThreadEventHandler + 0x4)<<16;
-    threadman_userlevel_struct += (short)_lh(addr);
-
-    // Set User Level
-    _sw((level ^ 8) << 28, *(unsigned int *)(threadman_userlevel_struct) + 0x14);
-    
-    // Flush Cache
-    k_tbl->KernelDcacheWritebackInvalidateAll();
-    
-    // Return previous User Level
-    return previouslevel;
-}
-
 int dcIdStorageReadLeaf(u16 leafid, u8 *buf)
 {
-    int level = sctrlKernelSetUserLevel(8);
+    int level = pspXploitSetUserLevel(8);
 
     int res = IdStorageReadLeaf(leafid, buf);
 
-    sctrlKernelSetUserLevel(level);
+    pspXploitSetUserLevel(level);
 
     return res;
 }
@@ -336,9 +309,9 @@ int kthread(SceSize args, void *argp){
         k_tbl->KernelIOClose(fd);
     }
 
-    if (IdStorageReadLeaf == NULL || KernelGetUserLevel == NULL){
+    if (IdStorageReadLeaf == NULL){
         pspDebugScreenPrintf("WARNING: cannot find idStorage imports, can't dump idStorage\n");
-        pspDebugScreenPrintf("%p, %p\n", IdStorageReadLeaf, KernelGetUserLevel);
+        pspDebugScreenPrintf("%p\n", IdStorageReadLeaf);
     }
     else {
         pspDebugScreenPrintf("Dumping idStorage\n");
@@ -366,16 +339,15 @@ int kthread(SceSize args, void *argp){
 
 void initDumperKernelThread(){
 
-    BufferCopyWithRange = FindFunction("sceMemlmd", "semaphore", 0x4C537C72);
+    BufferCopyWithRange = pspXploitFindFunction("sceMemlmd", "semaphore", 0x4C537C72);
 
-    char* nand_driver_mod = (FindTextAddrByName("sceLowIO_Driver")? "sceLowIO_Driver" : "sceNAND_Driver");
-    NandLock = FindFunction(nand_driver_mod, "sceNand_driver", 0xAE4438C7);
-    NandUnlock = FindFunction(nand_driver_mod, "sceNand_driver", 0x41FFA822);
-    NandReadPagesRawAll = FindFunction(nand_driver_mod, "sceNand_driver", 0xC478C1DE);
-    NandReadBlockWithRetry = FindFunction(nand_driver_mod, "sceNand_driver", 0xC32EA051);
+    char* nand_driver_mod = (pspXploitFindTextAddrByName("sceLowIO_Driver")? "sceLowIO_Driver" : "sceNAND_Driver");
+    NandLock = pspXploitFindFunction(nand_driver_mod, "sceNand_driver", 0xAE4438C7);
+    NandUnlock = pspXploitFindFunction(nand_driver_mod, "sceNand_driver", 0x41FFA822);
+    NandReadPagesRawAll = pspXploitFindFunction(nand_driver_mod, "sceNand_driver", 0xC478C1DE);
+    NandReadBlockWithRetry = pspXploitFindFunction(nand_driver_mod, "sceNand_driver", 0xC32EA051);
 
-    KernelGetUserLevel = FindFunction("sceThreadManager", "ThreadManForKernel", 0xF6427665);
-    IdStorageReadLeaf = FindFunction("sceIdStorage_Service", "sceIdStorage_driver", 0xEB00C509);
+    IdStorageReadLeaf = pspXploitFindFunction("sceIdStorage_Service", "sceIdStorage_driver", 0xEB00C509);
 
     SceUID kthreadID = k_tbl->KernelCreateThread( "arkflasher", (void*)KERNELIFY(&kthread), 1, 0x20000, PSP_THREAD_ATTR_VFPU, NULL);
     if (kthreadID >= 0){
